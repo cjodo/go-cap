@@ -24,8 +24,6 @@ type Field struct {
 }
 
 type FieldChoice struct {
-	ID		int 
+	ID    int
 	Label string
 }
-
-
