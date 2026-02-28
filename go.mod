@@ -1,4 +1,4 @@
-module redcap
+module go-cap
 
 go 1.25.0
 

@@ -1,10 +1,10 @@
 package redcap
 
-type RedcapEvent struct {
-	Event_Name        string
-	Arm_num           string
-	Day_offset        string
-	Offset_max        string
-	Offset_min        string
-	Unique_event_name string
+type Event struct {
+	Name 						string 	`json:"event_name"`		
+	ArmNum 					int 		`json:"arm_num"`		
+	DayOffset 			string 	`json:"day_offset"`		
+	OffsetMin 			string 	`json:"offset_min"`		
+	OffsetMax 			string 	`json:"offset_max"`		
+	UniqueEventName string	`json:"unique_event_name"`
 }
