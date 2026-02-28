@@ -1,125 +1,100 @@
-# GoCap
+# go-cap
 
-GoCap is a golang based library for REDCap. It provides helpful abstractions for making requests to REDCap's REST API.
+A Go client library and CLI tool for the REDCap API.
 
-The project is currently in development and not considered production-ready.
+## Installation
 
-## Example
-
-#### Quickstart
-
-```go
-project := redcap.NewRedcapProject("http://redcap.example.com", "<my_api_token>", true)
-
-fmt.Println(project.Forms)
-// returns: map[demographics:0xc2082b4500 testing:0xc2082b4640 imaging:0xc2082b4780]
-
+```bash
+go get github.com/cjodo/go-cap
 ```
-#### Creating a Postgres schema for a project and persisting forms to that DB with goroutines
+
+## Quick Start
 
 ```go
-// initialize the project
-project := redcap.NewRedcapProject("http://redcap.example.com", "<my_api_token>", true)
+package main
 
-// Create REDCap base tables
-_, err = db.Query(string(project.ToSQL("postgres")))
-if err != nil {
-	log.Fatal("[redcap] error creating base redcap tables. ", err)
+import (
+    "context"
+    "fmt"
+    "log"
+    
+    "github.com/cjodo/go-cap"
+)
+
+func main() {
+    client, err := redcap.NewClient(
+        "https://redcap.example.com/api/",
+        "your-api-token",
+    )
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    // Test connection
+    if err := client.Ping(context.Background()); err != nil {
+        log.Fatalf("failed to connect: %v", err)
+    }
+    
+    // Get project info
+    project, err := client.ExportProject(context.Background())
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Project: %v\n", project["project_title"])
+    
+    // Export records
+    records, err := client.ExportRecords(context.Background(),
+        redcap.ExportFields([]string{"record_id", "first_name"}),
+    )
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    for _, r := range records {
+        fmt.Printf("Record: %s\n", r.ID)
+    }
 }
 ```
 
-Pull forms concurrently and persist them to the database.
+## CLI Usage
 
-```go
-// Wait group for concurrent form retrieval
-var form_retrieval sync.WaitGroup
-form_retrieval.Add(len(project.Forms))
-// Export records for project forms
-for _, form := range project.Forms {
-    go func(f *redcap.RedcapForm) {
-        // Inform WaitGroup after each successful form retrieval
-        defer form_retrieval.Done()
-        // Define Export Parameters
-		params := redcap.ExportParameters{
-			Fields:              []string{project.Unique_key.Field_name, "redcap_event_name"},
-			Forms:               []string{f.Name},
-			RawOrLabel:          "label",
-			Format:              "csv",
-			ExportCheckboxLabel: true,
-		}
-        // Perform the Export
-		res := project.ExportRecords(params)
-        // Read the resulting bytes
-		r := bytes.NewReader(res)
-        // Create a CSV reader from the bytes
-        reader := csv.NewReader(r)
-		csvData, err := reader.ReadAll()
-		if err != nil {
-			log.Fatal(err)
-		}
+```bash
+# Set environment variables
+export REDCAP_URL="https://redcap.example.com/api/"
+export REDCAP_TOKEN="your-token"
 
-        // Open DB transaction
-		txn, err := db.Begin()
-		if err != nil {
-			log.Fatal(err)
-		}
+# Test connection
+cap ping
 
-		// Prepare INSERT statements from CSV file
-		for i, line := range csvData {
-			// skip header line
-			if i == 0 {
-				continue
-			}
-            // Clean our values
-			for j, value := range line {
-				// Escape quoted characters and convert to NULL if empty
-				line[j] = prepareValue(value)
-			}
+# Export metadata
+cap export metadata --format csv -o metadata.csv
 
-			values := strings.Join(line, ",")
-            // Create our SQL statement
-			stmt, err := txn.Prepare(fmt.Sprintf("insert into %s values(%s)", f.Name, values))
-			if err != nil {
-				log.Fatal(fmt.Sprintf("[redcap] error formatting insert statement for table %s. ", f.Name), err)
-			}
-            // Execute our SQL statement
-			if stmt != nil {
-				_, err = stmt.Exec()
-				if err != nil {
-					log.Fatal("[redcap] error executing statement ", err)
-				}
-				err = stmt.Close()
-			}
-		}
-        // Commit the transaction
-		err = txn.Commit()
-		fmt.Printf("Loaded REDCap form \"%s\"\n", f.Name)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}(form)
-}
+# Export records
+cap export records --forms demographics --format csv -o data.csv
 
-form_retrieval.Wait()
-
+# Import records
+cap import records data.csv --format csv
 ```
 
+## Features
 
-TODO:
-=====
+- Full REDCap API support
+- Context cancellation support
+- Automatic retry with exponential backoff
+- Rate limiting
+- Type-safe Go client
+- CLI tool for common operations
 
-#### Api functionality
-* Import Records
-* Export File
-* Import File
-* Delete File
-* Export Users
-* Export Form Event Mappings
+## API Endpoints Supported
 
-
-#### CLI
-* Forms to CSV
-* Project/Form to SQL
-
-#### Tests
-* Full test coverage
+- Project info
+- Metadata/Data dictionary
+- Records (export/import)
+- Instruments/Forms
+- Events (longitudinal)
+- Arms
+- Users
+- Data Access Groups (DAGs)
+- Files
+- Repeating forms/events
+- Form-event mappings
