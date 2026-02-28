@@ -16,3 +16,8 @@ type Client struct {
 	retryDelay  time.Duration
 }
 
+
+func NewClient(baseURL, token string, opts ...Option ) (*Client, error) {
+	return nil, nil
+}
+
