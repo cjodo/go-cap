@@ -5,6 +5,9 @@ A Go client library and CLI tool for the REDCap API.
 > [!NOTE]
 > Forked from in dev repo [tjrivera/go-cap](https://github.com/tjrivera/go-cap) 
 
+> [!IMPORTANT]
+> This repo is still in development. It is not production ready.  The first production ready release will be tagged v1.0.0
+
 ## Installation
 
 ```bash
