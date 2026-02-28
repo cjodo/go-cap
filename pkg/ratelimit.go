@@ -10,11 +10,12 @@ const (
 	DefaultBurst = 10
 )
 
-// RateLimiter defines the contract. 
+// RateLimiter defines the contract.
 // Note: Wait must return error to handle context cancellation.
 type RateLimiter interface {
 	Wait(ctx context.Context) error
 	SetRate(rps float64)
+	GetRate() float64
 }
 
 type limiter struct {
@@ -36,4 +37,9 @@ func (l *limiter) Wait(ctx context.Context) error {
 // SetRate converts the float64 to rate.Limit internally.
 func (l *limiter) SetRate(rps float64) {
 	l.r.SetLimit(rate.Limit(rps))
+}
+
+// GetRate returns the current rate in requests per second.
+func (l *limiter) GetRate() float64 {
+	return float64(l.r.Limit())
 }
